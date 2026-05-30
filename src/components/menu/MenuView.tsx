@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { SearchX } from "lucide-react";
+import { SearchX, RotateCcw } from "lucide-react";
 import { categories, products, productsByCategory } from "@/data/menu";
 import { restaurant } from "@/data/restaurant";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
@@ -104,6 +104,18 @@ export function MenuView() {
         <p className="mt-4 text-xs text-muted">
           Cardápio digital por <span className="font-bold text-brasa-700">Yooga OS</span> · demonstração
         </p>
+        <button
+          onClick={() => {
+            try {
+              localStorage.removeItem("brasa-burger:v1");
+              sessionStorage.removeItem("brasa:lastOrder");
+            } catch {}
+            window.location.href = "/";
+          }}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-line-2 px-3 py-1.5 text-xs font-bold text-ink-2 transition active:scale-95"
+        >
+          <RotateCcw size={13} /> Reiniciar demonstração
+        </button>
       </footer>
 
       <ProductModal />
