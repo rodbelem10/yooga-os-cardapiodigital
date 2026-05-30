@@ -3,7 +3,8 @@ import type { Totals } from "@/store/useStore";
 
 export interface PlacedOrder {
   id: string;
-  createdAtLabel: string;
+  dateLabel: string; // "30 mai 2026"
+  timeLabel: string; // "11:43"
   mode: OrderMode;
   customer: CustomerInfo;
   items: CartItem[];
@@ -14,7 +15,6 @@ export interface PlacedOrder {
   scheduledFor?: string | null;
   etaMin: number;
   etaMax: number;
-  whatsappMessage: string;
 }
 
 const KEY = "brasa:lastOrder";
@@ -34,4 +34,12 @@ export function loadPlacedOrder(): PlacedOrder | null {
   } catch {
     return null;
   }
+}
+
+/** Gera um ID de pedido curto legível (ex.: BRS-7K2Q). */
+export function makeOrderId(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return `BRS-${s}`;
 }

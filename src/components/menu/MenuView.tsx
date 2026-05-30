@@ -46,7 +46,7 @@ export function MenuView() {
   const searching = query.trim().length > 0;
 
   return (
-    <div className="mx-auto min-h-dvh max-w-2xl bg-cream pb-36">
+    <div className="mx-auto min-h-dvh max-w-2xl overflow-x-hidden bg-cream pb-36">
       <RestaurantHeader />
 
       <div className="mt-3">

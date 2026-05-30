@@ -21,7 +21,7 @@ export function PopularRail() {
           os favoritos da galera
         </span>
       </div>
-      <div className="no-scrollbar snap-x-mandatory flex gap-3 overflow-x-auto px-4 pb-1">
+      <div className="no-scrollbar snap-x-mandatory flex gap-3 overflow-x-auto px-4 pb-1 scroll-px-4">
         {popularProducts.map((product) => (
           <div
             key={product.id}

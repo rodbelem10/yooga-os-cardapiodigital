@@ -38,12 +38,12 @@ export function PromoBanners() {
   };
 
   return (
-    <div className="no-scrollbar snap-x-mandatory flex gap-3 overflow-x-auto px-4 pb-1">
+    <div className="no-scrollbar snap-x-mandatory flex gap-3 overflow-x-auto px-4 pb-1 scroll-px-4">
       {banners.map((b) => (
         <button
           key={b.id}
           onClick={() => scrollTo(b.target)}
-          className={`snap-start relative flex h-24 w-[78%] shrink-0 flex-col justify-center overflow-hidden rounded-2xl px-4 text-left shadow-card sm:w-64 ${b.className}`}
+          className={`snap-start relative flex h-24 w-[86%] shrink-0 flex-col justify-center overflow-hidden rounded-2xl px-4 text-left shadow-card sm:w-64 ${b.className}`}
         >
           <span className="absolute right-3 top-3 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold backdrop-blur">
             {b.tag}
@@ -53,6 +53,7 @@ export function PromoBanners() {
           <span className="text-xs font-medium opacity-90">{b.subtitle}</span>
         </button>
       ))}
+      <span aria-hidden className="block w-1 shrink-0" />
     </div>
   );
 }

@@ -22,8 +22,7 @@ import type { PaymentKind } from "@/lib/types";
 import { brl, isValidCep, isValidPhone, maskCep, onlyDigits } from "@/lib/format";
 import { lookupCep } from "@/lib/cep";
 import { selectionSummary } from "@/lib/cart";
-import { buildWhatsappMessage, makeOrderId } from "@/lib/whatsapp";
-import { savePlacedOrder, type PlacedOrder } from "@/lib/order";
+import { makeOrderId, savePlacedOrder, type PlacedOrder } from "@/lib/order";
 import { Sheet } from "@/components/ui/Sheet";
 import { buttonClasses } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -186,9 +185,13 @@ export function CheckoutSheet() {
     setPlacing(true);
     const orderId = makeOrderId();
     const paymentLabel = restaurant.paymentMethods.find((p) => p.id === payment)?.label ?? "Pix";
+    const now = new Date();
     const order: PlacedOrder = {
       id: orderId,
-      createdAtLabel: "agora",
+      dateLabel: now
+        .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+        .replace(/\./g, ""),
+      timeLabel: now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       mode,
       customer,
       items: cart,
@@ -199,22 +202,11 @@ export function CheckoutSheet() {
       scheduledFor,
       etaMin: restaurant.deliveryTimeMin,
       etaMax: restaurant.deliveryTimeMax,
-      whatsappMessage: "",
     };
-    order.whatsappMessage = buildWhatsappMessage({
-      orderId,
-      cart,
-      customer,
-      mode,
-      totals,
-      paymentLabel,
-      changeFor: order.changeFor,
-      scheduledFor,
-    });
     savePlacedOrder(order);
     setTimeout(() => {
       closeCheckout();
-      router.push("/pedido");
+      router.push(payment === "pix" ? "/pagamento" : "/pedido");
     }, 450);
   };
 
