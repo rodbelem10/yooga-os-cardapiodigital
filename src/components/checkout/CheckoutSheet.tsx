@@ -33,7 +33,7 @@ import { CustomerForm } from "./CustomerForm";
 import { ModeToggle } from "@/components/menu/ModeToggle";
 import { SchedulePicker } from "./SchedulePicker";
 
-type Step = "endereco" | "revisao";
+type Step = "endereco" | "contato" | "revisao";
 const PICKUP_ETA = 15;
 
 export function CheckoutSheet() {
@@ -48,8 +48,8 @@ export function CheckoutSheet() {
   const scheduledFor = useStore((s) => s.scheduledFor);
   const totals = useTotals();
 
-  const [step, setStep] = useState<Step>("revisao");
-  const [enteredViaAddress, setEnteredViaAddress] = useState(false);
+  const [stack, setStack] = useState<Step[]>(["revisao"]);
+  const [editingReturn, setEditingReturn] = useState(false);
   const [openedReturning, setOpenedReturning] = useState(false);
   const [payment, setPayment] = useState<PaymentKind>("pix");
   const [changeFor, setChangeFor] = useState<number | null>(null);
@@ -63,6 +63,10 @@ export function CheckoutSheet() {
   const [locating, setLocating] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const step = stack[stack.length - 1] ?? "revisao";
+  const stepsForMode: Step[] =
+    mode === "delivery" ? ["endereco", "contato", "revisao"] : ["contato", "revisao"];
+
   const hasContact = customer.name.trim().length >= 2 && isValidPhone(customer.phone);
   const hasAddress =
     isValidCep(customer.cep) &&
@@ -70,14 +74,18 @@ export function CheckoutSheet() {
     !!customer.number.trim() &&
     !!customer.neighborhood.trim();
 
-  // Roteamento na abertura do sheet
+  // Roteamento: abre no primeiro passo incompleto (recorrente cai direto na revisão)
   useEffect(() => {
     if (!open) return;
-    const needAddress = mode === "delivery" && !hasAddress;
-    const returning = hasContact && (mode === "pickup" || hasAddress);
-    setStep(needAddress ? "endereco" : "revisao");
-    setOpenedReturning(!needAddress && returning);
-    setEnteredViaAddress(false);
+    let start: Step = "revisao";
+    for (const s of stepsForMode) {
+      if (s === "endereco" && !hasAddress) { start = s; break; }
+      if (s === "contato" && !hasContact) { start = s; break; }
+      if (s === "revisao") { start = s; break; }
+    }
+    setStack([start]);
+    setOpenedReturning(start === "revisao");
+    setEditingReturn(false);
     setErrors({});
     setExpandedChip(null);
     setPlacing(false);
@@ -85,18 +93,7 @@ export function CheckoutSheet() {
     setEditingAddress(!customer.street.trim());
     setShowRef(!!customer.reference.trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Ajuste dinâmico ao trocar de modo pelo chip
-  useEffect(() => {
-    if (!open) return;
-    if (mode === "pickup" && step === "endereco") setStep("revisao");
-    if (mode === "delivery" && step === "revisao" && !hasAddress) {
-      setStep("endereco");
-      setOpenedReturning(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [open, mode]);
 
   const firstName = customer.name.trim().split(" ")[0] || "";
 
@@ -107,55 +104,82 @@ export function CheckoutSheet() {
     setTimeout(() => (el as HTMLElement | null)?.focus(), 300);
   };
 
-  const validateContact = (e: Record<string, string>) => {
+  const validateContact = () => {
+    const e: Record<string, string> = {};
     if (customer.name.trim().length < 2) e.name = "Como podemos te chamar?";
     if (!isValidPhone(customer.phone)) e.phone = "WhatsApp inválido";
+    return e;
   };
-  const validateAddress = (e: Record<string, string>) => {
+  const validateAddress = () => {
+    const e: Record<string, string> = {};
     if (!isValidCep(customer.cep)) e.cep = "CEP inválido";
     if (!customer.street.trim()) e.street = "Informe a rua";
     if (!customer.number.trim()) e.number = "Nº";
     if (!customer.neighborhood.trim()) e.neighborhood = "Informe o bairro";
+    return e;
   };
 
   const goBack = () => {
     setExpandedChip(null);
-    if (step === "revisao" && enteredViaAddress) {
-      setStep("endereco");
-      setEnteredViaAddress(false);
+    if (editingReturn) {
+      setEditingReturn(false);
+      setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
       return;
     }
-    closeCheckout();
-    openCart();
+    if (stack.length <= 1) {
+      closeCheckout();
+      openCart();
+      return;
+    }
+    setStack((s) => s.slice(0, -1));
   };
 
-  const goToRevisao = () => {
-    const e: Record<string, string> = {};
-    validateAddress(e);
-    validateContact(e);
-    setErrors(e);
-    if (Object.keys(e).length) {
-      toast.error("Confira os campos destacados");
-      focusFirst(e);
-      return;
-    }
-    setEnteredViaAddress(true);
-    setStep("revisao");
+  const goNext = (target: Step) => {
+    setStack((s) => [...s, target]);
     scrollTop();
   };
 
+  const finishEdit = () => {
+    setEditingReturn(false);
+    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+    scrollTop();
+  };
+
+  const editField = (target: Step) => {
+    setEditingReturn(true);
+    setStack((s) => [...s, target]);
+    scrollTop();
+  };
+
+  const onPrimary = () => {
+    if (step === "endereco") {
+      const e = validateAddress();
+      setErrors(e);
+      if (Object.keys(e).length) { toast.error("Confira os campos destacados"); focusFirst(e); return; }
+      editingReturn ? finishEdit() : goNext("contato");
+      return;
+    }
+    if (step === "contato") {
+      const e = validateContact();
+      setErrors(e);
+      if (Object.keys(e).length) { toast.error("Confira os campos destacados"); focusFirst(e); return; }
+      editingReturn ? finishEdit() : goNext("revisao");
+      return;
+    }
+    placeOrder();
+  };
+
   const placeOrder = () => {
-    const e: Record<string, string> = {};
-    validateContact(e);
-    if (mode === "delivery") validateAddress(e);
+    const e = { ...validateContact(), ...(mode === "delivery" ? validateAddress() : {}) };
     setErrors(e);
     if (Object.keys(e).length) {
-      if (mode === "delivery" && step !== "endereco") {
-        setStep("endereco");
-        setEnteredViaAddress(true);
-      }
+      const firstStep: Step =
+        mode === "delivery" && (e.cep || e.street || e.number || e.neighborhood)
+          ? "endereco"
+          : "contato";
+      setStack([...stepsForMode.slice(0, stepsForMode.indexOf(firstStep) + 1)]);
       toast.error("Confira os campos destacados");
-      setTimeout(() => focusFirst(e), 80);
+      setTimeout(() => focusFirst(e), 120);
       return;
     }
 
@@ -194,7 +218,7 @@ export function CheckoutSheet() {
     }, 450);
   };
 
-  // ---- Handlers do endereço ----
+  // ---- Endereço ----
   const handleCep = async (raw: string) => {
     const masked = maskCep(raw);
     setCustomer({ cep: masked });
@@ -230,7 +254,7 @@ export function CheckoutSheet() {
     }, 800);
   };
 
-  // ---- Textos dinâmicos ----
+  // ---- Textos ----
   const feeText = totals.freeDelivery ? "grátis" : brl(restaurant.deliveryFee);
   const chipModeText =
     mode === "delivery"
@@ -238,26 +262,33 @@ export function CheckoutSheet() {
       : `🏪 Retirada · pronto em ~${PICKUP_ETA} min`;
   const chipWhenText = scheduledFor ? `📅 ${scheduledFor}` : "⚡ Agora";
 
-  const title =
-    step === "endereco"
-      ? "Onde a gente entrega? 🛵"
-      : openedReturning
-        ? `Bom te ver de novo, ${firstName} 👋`
-        : "Tudo certo? 🤝";
-  const subtitle =
-    step === "endereco"
-      ? "Começa pelo CEP que a gente preenche o resto."
-      : openedReturning
+  const heads: Record<Step, { title: string; subtitle: string }> = {
+    endereco: {
+      title: "Onde a gente entrega? 🛵",
+      subtitle: "Começa pelo CEP que a gente preenche o resto.",
+    },
+    contato: {
+      title: "Quase lá! 🤝",
+      subtitle: "Só pra confirmar e te avisar pelo WhatsApp.",
+    },
+    revisao: {
+      title: openedReturning ? `Bom te ver de novo, ${firstName} 👋` : "Tudo certo? 🤝",
+      subtitle: openedReturning
         ? "Tá tudo como da última vez — é só conferir e pagar."
-        : "Confere e paga no Pix — cai na hora ⚡";
+        : "Confere e paga no Pix — cai na hora ⚡",
+    },
+  };
 
   const isPix = payment === "pix";
-  const ctaLabel =
-    step === "endereco"
-      ? "Ir pro pagamento"
-      : isPix
-        ? "Confirmar e pagar no Pix"
-        : "Fazer pedido";
+  const ctaLabel = editingReturn
+    ? "Salvar"
+    : step === "endereco"
+      ? "Continuar"
+      : step === "contato"
+        ? "Ir pro pagamento"
+        : isPix
+          ? "Confirmar e pagar no Pix"
+          : "Fazer pedido";
 
   // ---- Render dos passos ----
   const renderAddress = () => (
@@ -363,21 +394,22 @@ export function CheckoutSheet() {
           <Plus size={15} /> Ponto de referência
         </button>
       )}
+    </div>
+  );
 
-      <div className="flex items-center gap-3 pt-2">
-        <div className="h-px flex-1 bg-line" />
-        <span className="text-xs font-bold uppercase tracking-wide text-muted">
-          Pra confirmar no Zap 💬
-        </span>
-        <div className="h-px flex-1 bg-line" />
-      </div>
+  const renderContato = () => (
+    <div className="space-y-3">
       <CustomerForm errors={errors} />
+      <p className="flex items-center gap-1.5 px-1 text-xs font-medium text-muted">
+        <Lock size={13} className="shrink-0" /> Sem cadastro e sem senha — é só pra confirmar e te avisar
+        quando o pedido sair.
+      </p>
     </div>
   );
 
   const renderRevisao = () => (
     <div className="space-y-4">
-      {mode === "pickup" && (
+      {mode === "pickup" ? (
         <>
           <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card">
             <span className="text-xl">🏪</span>
@@ -387,28 +419,27 @@ export function CheckoutSheet() {
               <p className="text-xs font-medium text-ink-2">{restaurant.city}</p>
             </div>
           </div>
-          <CustomerForm errors={errors} />
+          <SummaryCard
+            icon="💬"
+            line1={customer.name}
+            line2={customer.phone}
+            onEdit={() => editField("contato")}
+          />
         </>
-      )}
-
-      {mode === "delivery" && (
-        <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card">
-          <span className="text-lg">💬</span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-ink">{customer.name}</p>
-            <p className="truncate text-xs font-medium text-ink-2">
-              {customer.phone} · {customer.street}, {customer.number}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setStep("endereco");
-              setEnteredViaAddress(true);
-            }}
-            className="flex items-center gap-1 text-xs font-bold text-brasa-700"
-          >
-            <Pencil size={12} /> editar
-          </button>
+      ) : (
+        <div className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-card">
+          <SummaryRow
+            icon="💬"
+            line1={customer.name}
+            line2={customer.phone}
+            onEdit={() => editField("contato")}
+          />
+          <SummaryRow
+            icon="📍"
+            line1={`${customer.street}, ${customer.number}`}
+            line2={`${customer.neighborhood} — ${customer.city}`}
+            onEdit={() => editField("endereco")}
+          />
         </div>
       )}
 
@@ -424,7 +455,7 @@ export function CheckoutSheet() {
           </span>
           <span className="flex items-center gap-1 text-xs font-bold text-brasa-700">
             {showItems ? "ocultar" : "ver"}
-            <ChevronDown size={15} className={showItems ? "rotate-180 transition" : "transition"} />
+            <ChevronDown size={15} className={showItems ? "rotate-180" : ""} />
           </span>
         </button>
         {showItems && (
@@ -452,20 +483,19 @@ export function CheckoutSheet() {
         <Plus size={15} /> Adicionar mais itens
       </button>
 
-      {/* Pagamento */}
       <div>
         <h3 className="mb-2 font-display text-base font-extrabold text-ink">Como prefere pagar?</h3>
-        <PaymentMethods
-          value={payment}
-          onChange={setPayment}
-          onChangeFor={setChangeFor}
-          collapseSecondary
-        />
+        <PaymentMethods value={payment} onChange={setPayment} onChangeFor={setChangeFor} collapseSecondary />
       </div>
 
       <OrderTotals totals={totals} mode={mode} />
     </div>
   );
+
+  const renderStep = () =>
+    step === "endereco" ? renderAddress() : step === "contato" ? renderContato() : renderRevisao();
+
+  const currentIndex = stepsForMode.indexOf(step);
 
   return (
     <Sheet
@@ -486,18 +516,21 @@ export function CheckoutSheet() {
             <ArrowLeft size={19} />
           </button>
           <h2 className="min-w-0 flex-1 truncate font-display text-lg font-extrabold leading-tight text-ink">
-            {title}
+            {heads[step].title}
           </h2>
-          {mode === "delivery" && (
-            <div className="flex shrink-0 items-center gap-1">
-              <span className={`h-1.5 w-5 rounded-full ${step === "endereco" ? "bg-brasa" : "bg-success"}`} />
-              <span className={`h-1.5 w-5 rounded-full ${step === "revisao" ? "bg-brasa" : "bg-line-2"}`} />
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            {stepsForMode.map((s, i) => (
+              <span
+                key={s}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === currentIndex ? "w-5 bg-brasa" : i < currentIndex ? "w-2.5 bg-success" : "w-2.5 bg-line-2"
+                }`}
+              />
+            ))}
+          </div>
         </div>
-        <p className="ml-11 mt-0.5 text-xs font-medium text-ink-2">{subtitle}</p>
+        <p className="ml-11 mt-0.5 text-xs font-medium text-ink-2">{heads[step].subtitle}</p>
 
-        {/* Context bar: modo + quando */}
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => setExpandedChip((c) => (c === "mode" ? null : "mode"))}
@@ -538,13 +571,13 @@ export function CheckoutSheet() {
       <div ref={contentRef} className="no-scrollbar flex-1 overflow-y-auto px-4 py-4">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={step}
+            key={step + (editingReturn ? "-edit" : "")}
             initial={{ opacity: 0, x: 18 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -18 }}
             transition={{ duration: 0.22 }}
           >
-            {step === "endereco" ? renderAddress() : renderRevisao()}
+            {renderStep()}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -557,21 +590,54 @@ export function CheckoutSheet() {
           </p>
         )}
         <button
-          onClick={step === "endereco" ? goToRevisao : placeOrder}
+          onClick={onPrimary}
           disabled={placing}
           className={buttonClasses(
-            step === "revisao" && isPix ? "success" : "primary",
+            step === "revisao" && isPix && !editingReturn ? "success" : "primary",
             "lg",
             "w-full justify-between",
           )}
         >
           <span className="flex items-center gap-2">
-            {step === "revisao" && (isPix ? <QrCode size={18} /> : <ShieldCheck size={18} />)}
+            {step === "revisao" && !editingReturn && (isPix ? <QrCode size={18} /> : <ShieldCheck size={18} />)}
             {placing ? "Enviando…" : ctaLabel}
           </span>
           <span className="tabular-nums">{brl(totals.total)}</span>
         </button>
       </div>
     </Sheet>
+  );
+}
+
+function SummaryRow({
+  icon,
+  line1,
+  line2,
+  onEdit,
+}: {
+  icon: string;
+  line1: string;
+  line2: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-3">
+      <span className="text-lg">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-ink">{line1}</p>
+        <p className="truncate text-xs font-medium text-ink-2">{line2}</p>
+      </div>
+      <button onClick={onEdit} className="flex items-center gap-1 text-xs font-bold text-brasa-700">
+        <Pencil size={12} /> editar
+      </button>
+    </div>
+  );
+}
+
+function SummaryCard(props: { icon: string; line1: string; line2: string; onEdit: () => void }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface shadow-card">
+      <SummaryRow {...props} />
+    </div>
   );
 }
