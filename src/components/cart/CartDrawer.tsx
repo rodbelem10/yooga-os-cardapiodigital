@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ShoppingBag, Plus, ArrowRight, Trash2 } from "lucide-react";
 import { useStore, useTotals } from "@/store/useStore";
 import { restaurant } from "@/data/restaurant";
@@ -17,6 +16,7 @@ import { OrderTotals } from "./OrderTotals";
 export function CartDrawer() {
   const cartOpen = useStore((s) => s.cartOpen);
   const closeCart = useStore((s) => s.closeCart);
+  const openCheckout = useStore((s) => s.openCheckout);
   const clearCart = useStore((s) => s.clearCart);
   const cart = useStore((s) => s.cart);
   const mode = useStore((s) => s.mode);
@@ -116,16 +116,15 @@ export function CartDrawer() {
                 </button>
               </>
             ) : (
-              <Link
-                href="/checkout"
-                onClick={closeCart}
+              <button
+                onClick={openCheckout}
                 className={buttonClasses("primary", "lg", "w-full justify-between")}
               >
                 <span>Ir para o pagamento</span>
                 <span className="flex items-center gap-1 tabular-nums">
                   {brl(totals.total)} <ArrowRight size={18} />
                 </span>
-              </Link>
+              </button>
             )}
           </div>
         </>

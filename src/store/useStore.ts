@@ -28,6 +28,7 @@ interface StoreState {
   productModalId: string | null;
   editingUid: string | null;
   cartOpen: boolean;
+  checkoutOpen: boolean;
   flyKey: number; // dispara animação de "voar pra sacola"
 
   // ---- ações ----
@@ -43,6 +44,8 @@ interface StoreState {
   closeProduct: () => void;
   openCart: () => void;
   closeCart: () => void;
+  openCheckout: () => void;
+  closeCheckout: () => void;
   triggerFly: () => void;
 }
 
@@ -57,6 +60,7 @@ export const useStore = create<StoreState>()(
       productModalId: null,
       editingUid: null,
       cartOpen: false,
+      checkoutOpen: false,
       flyKey: 0,
 
       addItem: (item, replaceUid) =>
@@ -108,6 +112,8 @@ export const useStore = create<StoreState>()(
       closeProduct: () => set({ productModalId: null, editingUid: null }),
       openCart: () => set({ cartOpen: true }),
       closeCart: () => set({ cartOpen: false }),
+      openCheckout: () => set({ checkoutOpen: true, cartOpen: false }),
+      closeCheckout: () => set({ checkoutOpen: false }),
       triggerFly: () => set((s) => ({ flyKey: s.flyKey + 1 })),
     }),
     {

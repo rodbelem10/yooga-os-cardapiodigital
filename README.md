@@ -12,9 +12,9 @@ Demo de frontend (dados mockados) que destila o melhor de **8 benchmarks brasile
 
 <div align="center">
 
-| Cardápio | Produto | Sacola | Confirmação |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/home.png" width="190"/> | <img src="docs/screenshots/produto.png" width="190"/> | <img src="docs/screenshots/sacola.png" width="190"/> | <img src="docs/screenshots/confirmacao.png" width="190"/> |
+| Cardápio | Produto | Sacola | Checkout (sheet) | Confirmação |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/home.png" width="150"/> | <img src="docs/screenshots/produto.png" width="150"/> | <img src="docs/screenshots/sacola.png" width="150"/> | <img src="docs/screenshots/checkout.png" width="150"/> | <img src="docs/screenshots/confirmacao.png" width="150"/> |
 
 </div>
 
@@ -38,7 +38,7 @@ Cardápio  →  Detalhe do produto  →  Sacola  →  Checkout  →  Confirmaç�
 1. **Cardápio** — capa + logo + nota + status aberto, toggle Entrega/Retirada, busca, **tabs de categoria sticky com scroll-spy**, trilho "🔥 Mais pedidos", banners e barra de fidelidade.
 2. **Detalhe** — bottom-sheet com foto grande, **adicionais com regras (obrigatório/opcional, min/máx)**, observações e **CTA que recalcula o total ao vivo**.
 3. **Sacola** — barra sticky no rodapé, edição inline, **upsell "Peça também"**, **"faltam R$X pro frete grátis"**, cupom **auto-sugerido**, bloqueio de pedido mínimo.
-4. **Checkout** — guest puro (nome + WhatsApp), **endereço só quando delivery** (com **autofill por CEP** e "usar minha localização"), agendamento, e **Pix no topo como pagamento padrão**.
+4. **Checkout** — **bottom-sheet em 1–2 passos** (nunca troca de rota): endereço com **autofill por CEP** (vira card confirmado, só o número é digitado) → revisão com **Pix dominante**. Modo e agendamento viram **chips editáveis** no topo, total sempre colado no CTA. **Cliente recorrente abre direto na revisão = pedido em 1 toque.**
 5. **Confirmação** — resumo on-site, **Pix com QR + copia-e-cola**, status do pedido e **handoff pro WhatsApp com a mensagem já montada**.
 
 ## ⚡ Princípios de conversão aplicados

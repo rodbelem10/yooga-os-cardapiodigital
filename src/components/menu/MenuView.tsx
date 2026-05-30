@@ -16,6 +16,7 @@ import { ProductRow } from "./ProductRow";
 import { ProductModal } from "@/components/product/ProductModal";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartBar } from "@/components/cart/CartBar";
+import { CheckoutSheet } from "@/components/checkout/CheckoutSheet";
 
 const norm = (s: string) =>
   s
@@ -107,6 +108,7 @@ export function MenuView() {
 
       <ProductModal />
       <CartDrawer />
+      <CheckoutSheet />
       <CartBar />
     </div>
   );
